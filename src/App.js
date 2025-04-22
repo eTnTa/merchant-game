@@ -93,6 +93,21 @@ function App() {
       }}>
         💴 所持金：{money} G
       </p>
+      <div style={{ marginTop: '8px' }}>
+  <input
+    type="number"
+    value={money}
+    onChange={e => setMoney(Number(e.target.value))}
+    style={{
+      width: '120px',
+      padding: '5px',
+      fontSize: '16px',
+      marginRight: '8px'
+    }}
+  />
+  <span>G に設定</span>
+</div>
+
       <div style={{ marginTop: '10px' }}>
         <button onClick={handleResetMoney} style={{
           background: '#444',
