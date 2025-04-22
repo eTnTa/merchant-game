@@ -98,7 +98,10 @@ function App() {
   return (
     <div className="App" style={{ fontFamily: 'sans-serif', padding: '20px' }}>
       <h1>行商ボードゲーム {isBlackMarket ? '闇市場' : '売買画面'}</h1>
-      <h2>現在地: {placeName}（分類: {placeType}）</h2>
+     <h2>
+  現在地: {isBlackMarket ? '？？？（分類: 路地裏）' : `${placeName}（分類: ${placeType}）`}
+</h2>
+
       {specialBuy && !isBlackMarket && <p style={{ color: 'green' }}>🌟 特産品: {specialBuy}</p>}
       {specialSell && !isBlackMarket && <p style={{ color: 'red' }}>💎 希少品: {specialSell}</p>}
       <p style={{fontSize: '24px', border: '2px solid gold', padding: '10px', borderRadius: '8px', display: 'inline-block', background: '#fffbe6'}}>💴 所持金：{money} G</p>
