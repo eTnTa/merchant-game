@@ -7,6 +7,7 @@ function App() {
   const INITIAL_MONEY = 3000;
   const params = new URLSearchParams(window.location.search);
   const placeName = params.get('place') || 'バウ';
+  const isBlackMarket = params.get('black') === '1';
 
   const placeInfo = placeData.find(p => p.地名 === placeName);
   const placeType = placeInfo?.分類 || '村';
@@ -23,6 +24,20 @@ function App() {
   const itemLimit = { '村': 5, '町': 10, '市': 20 }[placeType] || 8;
 
   useEffect(() => {
+    if (isBlackMarket) {
+      const allItems = Object.entries(itemsData).flatMap(([category, items]) =>
+        Object.entries(items).map(([itemName, basePrice]) => {
+          const price = Math.round(basePrice * (0.5 + Math.random() * 0.5));
+          return { itemName, price, category };
+        })
+      );
+      const shuffledBuy = allItems.sort(() => 0.5 - Math.random()).slice(0, 8);
+      const shuffledSell = allItems.sort(() => 0.5 - Math.random()).slice(0, 8);
+      setFinalBuyList(shuffledBuy);
+      setFinalSellList(shuffledSell);
+      return;
+    }
+
     const adjusted = {};
     Object.entries(itemsData).forEach(([category, items]) => {
       adjusted[category] = {};
@@ -48,7 +63,7 @@ function App() {
 
     setFinalBuyList(finalBuy);
     setFinalSellList(finalSell);
-  }, [placeName, placeType, specialBuy, specialSell, itemLimit]);
+  }, [isBlackMarket, placeName, placeType, specialBuy, specialSell, itemLimit]);
 
   useEffect(() => {
     localStorage.setItem('playerMoney', money);
@@ -67,7 +82,10 @@ function App() {
 
   const handleSell = (item, quantity) => {
     if (quantity <= 0) return alert("数量を正しく入力してください。");
-    const totalGain = item.price * quantity;
+    let totalGain = item.price * quantity;
+    if (isBlackMarket) {
+      totalGain = Math.round(totalGain * 1.5);
+    }
     setMoney(money + totalGain);
     alert(`${item.itemName} を ${quantity}個 売却！（+${totalGain}G）`);
   };
@@ -79,69 +97,34 @@ function App() {
 
   return (
     <div className="App" style={{ fontFamily: 'sans-serif', padding: '20px' }}>
-      <h1>行商ボードゲーム 売買画面</h1>
+      <h1>行商ボードゲーム {isBlackMarket ? '闇市場' : '売買画面'}</h1>
       <h2>現在地: {placeName}（分類: {placeType}）</h2>
-      {specialBuy && <p style={{ color: 'green' }}>🌟 特産品: {specialBuy}</p>}
-      {specialSell && <p style={{ color: 'red' }}>💎 希少品: {specialSell}</p>}
-      <p style={{
-        fontSize: '24px',
-        border: '2px solid gold',
-        padding: '10px',
-        borderRadius: '8px',
-        display: 'inline-block',
-        background: '#fffbe6'
-      }}>
-        💴 所持金：{money} G
-      </p>
+      {specialBuy && !isBlackMarket && <p style={{ color: 'green' }}>🌟 特産品: {specialBuy}</p>}
+      {specialSell && !isBlackMarket && <p style={{ color: 'red' }}>💎 希少品: {specialSell}</p>}
+      <p style={{fontSize: '24px', border: '2px solid gold', padding: '10px', borderRadius: '8px', display: 'inline-block', background: '#fffbe6'}}>💴 所持金：{money} G</p>
+
       <div style={{ marginTop: '8px' }}>
-  <input
-    type="number"
-    value={money}
-    onChange={e => setMoney(Number(e.target.value))}
-    style={{
-      width: '120px',
-      padding: '5px',
-      fontSize: '16px',
-      marginRight: '8px'
-    }}
-  />
-  <span>G に設定</span>
-</div>
+        <input
+          type="number"
+          value={money}
+          onChange={e => setMoney(Number(e.target.value))}
+          style={{ width: '120px', padding: '5px', fontSize: '16px', marginRight: '8px' }}
+        />
+        <span>G に設定</span>
+      </div>
 
       <div style={{ marginTop: '10px' }}>
-        <button onClick={handleResetMoney} style={{
-          background: '#444',
-          color: '#fff',
-          padding: '8px 16px',
-          borderRadius: '5px'
-        }}>所持金リセット（3000Gに戻す）</button>
+        <button onClick={handleResetMoney} style={{background: '#444', color: '#fff', padding: '8px 16px', borderRadius: '5px'}}>所持金リセット（3000Gに戻す）</button>
       </div>
 
       <h2>購入できるアイテム</h2>
       <div style={{ display: 'grid', gap: '10px' }}>
         {finalBuyList.map((item, index) => (
-          <div key={index} style={{
-            border: `2px solid ${
-              item.itemName === specialBuy ? 'green' :
-              item.itemName === specialSell ? 'red' : '#ccc'
-            }`,
-            padding: '10px',
-            borderRadius: '8px',
-            background: item.itemName === specialBuy ? '#e9fbe9' :
-                        item.itemName === specialSell ? '#fde9e9' : '#f9f9f9'
-          }}>
+          <div key={index} style={{border: '2px solid #ccc', padding: '10px', borderRadius: '8px', background: '#f9f9f9'}}>
             <strong>{item.itemName}</strong> ({item.category}) - {item.price}G /個
-            {item.itemName === specialBuy && <span style={{ marginLeft: '10px', color: 'green', fontWeight: 'bold' }}>🌟特産品</span>}
-            {item.itemName === specialSell && <span style={{ marginLeft: '10px', color: 'red', fontWeight: 'bold' }}>💎希少品</span>}
             <div>
-              <input type="number" min="1" value={buyQuantities[item.itemName] || ''} onChange={e => setBuyQuantities({
-                ...buyQuantities,
-                [item.itemName]: e.target.value
-              })} style={{ width: '50px', margin: '5px' }} /> 個
-              <button onClick={() => handleBuy(item, Number(buyQuantities[item.itemName]))}
-                style={{ background: '#4caf50', color: '#fff', padding: '5px 10px', borderRadius: '5px' }}>
-                購入
-              </button>
+              <input type="number" min="1" value={buyQuantities[item.itemName] || ''} onChange={e => setBuyQuantities({...buyQuantities, [item.itemName]: e.target.value})} style={{ width: '50px', margin: '5px' }} /> 個
+              <button onClick={() => handleBuy(item, Number(buyQuantities[item.itemName]))} style={{ background: '#4caf50', color: '#fff', padding: '5px 10px', borderRadius: '5px' }}>購入</button>
             </div>
           </div>
         ))}
@@ -150,28 +133,11 @@ function App() {
       <h2 style={{ marginTop: '20px' }}>売却できるアイテム</h2>
       <div style={{ display: 'grid', gap: '10px' }}>
         {finalSellList.map((item, index) => (
-          <div key={index} style={{
-            border: `2px solid ${
-              item.itemName === specialSell ? 'red' :
-              item.itemName === specialBuy ? 'green' : '#ccc'
-            }`,
-            padding: '10px',
-            borderRadius: '8px',
-            background: item.itemName === specialSell ? '#fde9e9' :
-                        item.itemName === specialBuy ? '#e9fbe9' : '#f9f9f9'
-          }}>
+          <div key={index} style={{border: '2px solid #ccc', padding: '10px', borderRadius: '8px', background: '#f9f9f9'}}>
             <strong>{item.itemName}</strong> ({item.category}) - {item.price}G /個
-            {item.itemName === specialSell && <span style={{ marginLeft: '10px', color: 'red', fontWeight: 'bold' }}>💎希少品</span>}
-            {item.itemName === specialBuy && <span style={{ marginLeft: '10px', color: 'green', fontWeight: 'bold' }}>🌟特産品</span>}
             <div>
-              <input type="number" min="1" value={sellQuantities[item.itemName] || ''} onChange={e => setSellQuantities({
-                ...sellQuantities,
-                [item.itemName]: e.target.value
-              })} style={{ width: '50px', margin: '5px' }} /> 個
-              <button onClick={() => handleSell(item, Number(sellQuantities[item.itemName]))}
-                style={{ background: '#e53935', color: '#fff', padding: '5px 10px', borderRadius: '5px' }}>
-                売却
-              </button>
+              <input type="number" min="1" value={sellQuantities[item.itemName] || ''} onChange={e => setSellQuantities({...sellQuantities, [item.itemName]: e.target.value})} style={{ width: '50px', margin: '5px' }} /> 個
+              <button onClick={() => handleSell(item, Number(sellQuantities[item.itemName]))} style={{ background: '#e53935', color: '#fff', padding: '5px 10px', borderRadius: '5px' }}>売却</button>
             </div>
           </div>
         ))}
