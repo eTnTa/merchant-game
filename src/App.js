@@ -21,12 +21,13 @@ function App() {
   const [finalSellList, setFinalSellList] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [categoryChangeCount, setCategoryChangeCount] = useState(Number(localStorage.getItem('categoryChangeCount')) || 0);
+  const [categoryChanged, setCategoryChanged] = useState(false);  // カテゴリーが変更されたかを記録するステート
 
   const areaMultiplier = { '村': 1.0, '町': 1.3, '市': 1.6 };
   const itemLimit = { '村': 5, '町': 10, '市': 20 }[placeType] || 8;
 
   useEffect(() => {
-    // カテゴリーの変更処理
+    // カテゴリー変更処理
     const categoriesAvailable = {
       '村': 1,
       '町': 2,
@@ -37,9 +38,13 @@ function App() {
     let newCategoryChangeCount = categoryChangeCount + 1;
     if (newCategoryChangeCount >= 5) {
       newCategoryChangeCount = 0; // 5回目でカテゴリーをリセット
+      setCategoryChanged(true);  // カテゴリー変更フラグを立てる
     }
     setCategoryChangeCount(newCategoryChangeCount);
     localStorage.setItem('categoryChangeCount', newCategoryChangeCount);
+
+    // カテゴリーが変更されていない場合、既存のカテゴリーを再使用
+    if (!categoryChanged) return;
 
     // ランダムなカテゴリーを選択
     const categoryPool = Object.keys(itemsData); // items.jsonに基づくカテゴリー
@@ -54,7 +59,8 @@ function App() {
     }
 
     setSelectedCategories(selected); // 選ばれたカテゴリーを保存
-  }, [categoryChangeCount, placeType]);
+    setCategoryChanged(false);  // カテゴリー変更フラグをリセット
+  }, [categoryChangeCount, placeType, categoryChanged]);
 
   useEffect(() => {
     if (isBlackMarket) {
@@ -93,7 +99,7 @@ function App() {
     setFinalBuyList(randomBuy);
     setFinalSellList(randomSell);
 
-  }, [selectedCategories, isBlackMarket, placeName, placeType, itemLimit]);
+  }, [selectedCategories, isBlackMarket, placeName, placeType, itemLimit, categoryChanged]);
 
   useEffect(() => {
     localStorage.setItem('playerMoney', money);
