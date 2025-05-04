@@ -10,7 +10,7 @@ function App() {
   const isBlackMarket = params.get('black') === '1';
 
   const placeInfo = placeData.find(p => p.地名 === placeName);
-  const placeType = placeInfo?.分類 || '村';
+  const placeType = placeInfo?.分類 || '村'; // ここで分類を取得
   const specialBuy = placeInfo?.特産品 || null;
   const specialSell = placeInfo?.希少品 || null;
 
@@ -79,6 +79,15 @@ function App() {
     }
   }, [enterCount]);
 
+  useEffect(() => {
+    // 現在のカテゴリーに基づいて表示するアイテムをフィルタリング
+    const filteredBuyList = finalBuyList.filter(item => item.category === currentCategory);
+    const filteredSellList = finalSellList.filter(item => item.category === currentCategory);
+
+    setFinalBuyList(filteredBuyList);
+    setFinalSellList(filteredSellList);
+  }, [currentCategory, finalBuyList, finalSellList]);
+
   const handleBuy = (item, quantity) => {
     const totalCost = item.price * quantity;
     if (quantity <= 0) return alert("数量を正しく入力してください。");
@@ -109,7 +118,7 @@ function App() {
     <div className="App" style={{ fontFamily: 'sans-serif', padding: '20px' }}>
       <h1>行商ボードゲーム {isBlackMarket ? '闇市場' : '売買画面'}</h1>
       <h2>
-        現在地: {isBlackMarket ? '？？？（分類: 路地裏）' : `${placeName}（分類: ${currentCategory}）`}
+        現在地: {isBlackMarket ? '？？？（分類: 路地裏）' : `${placeName}（分類: ${placeType}）`}  {/* placeType を表示 */}
       </h2>
 
       {specialBuy && !isBlackMarket && <p style={{ color: 'green' }}>🌟 特産品: {specialBuy}</p>}
