@@ -19,9 +19,10 @@ function App() {
   const [sellQuantities, setSellQuantities] = useState({});
   const [finalBuyList, setFinalBuyList] = useState([]);
   const [finalSellList, setFinalSellList] = useState([]);
+  const [enterCount, setEnterCount] = useState(() => Number(localStorage.getItem('enterCount')) || 0); // 追加
+  const [currentCategory, setCurrentCategory] = useState('金属'); // 初期カテゴリーは金属
 
-  const areaMultiplier = { '村': 1.0, '町': 1.3, '市': 1.6 };
-  const itemLimit = { '村': 5, '町': 10, '市': 20 }[placeType] || 8;
+  const categories = ['金属', '植物', '獣', '食品', '宝石', 'その他']; // カテゴリーのリスト
 
   useEffect(() => {
     if (isBlackMarket) {
@@ -42,7 +43,7 @@ function App() {
     Object.entries(itemsData).forEach(([category, items]) => {
       adjusted[category] = {};
       Object.entries(items).forEach(([itemName, basePrice]) => {
-        let price = basePrice * areaMultiplier[placeType];
+        let price = basePrice;
         const randomRate = 0.9 + Math.random() * 0.2;
         adjusted[category][itemName] = Math.round(price * randomRate);
       });
@@ -55,43 +56,28 @@ function App() {
     const specialBuyItem = allItems.find(item => item.itemName === specialBuy);
     const specialSellItem = allItems.find(item => item.itemName === specialSell);
 
-    // 利用可能なカテゴリを選択
-    const availableCategories = Object.keys(adjusted);
-    let categoriesToUse = [];
-
-    // 村（1カテゴリ）
-    if (placeType === '村') {
-      categoriesToUse = [availableCategories[0]];
-    }
-    // 町（2カテゴリ）
-    else if (placeType === '町') {
-      categoriesToUse = [availableCategories[0], availableCategories[1]];
-    }
-    // 市（3カテゴリ）
-    else if (placeType === '市') {
-      categoriesToUse = [availableCategories[0], availableCategories[1], availableCategories[2]];
-    }
-
-    // 特産品と希少品を取り除いてランダムでアイテムを選択
-    const filteredItems = allItems.filter(item =>
-      ![specialBuy, specialSell].includes(item.itemName) &&
-      categoriesToUse.includes(item.category)
-    );
-
-    // 特産品と希少品を選んだカテゴリーに追加
-    const randomBuy = filteredItems.sort(() => 0.5 - Math.random()).slice(0, Math.max(0, itemLimit - 1));
-    const randomSell = filteredItems.sort(() => 0.5 - Math.random()).slice(0, Math.max(0, itemLimit - 1));
+    const randomBuy = allItems.filter(item => item.itemName !== specialBuy).sort(() => 0.5 - Math.random()).slice(0, 8);
+    const randomSell = allItems.filter(item => item.itemName !== specialSell).sort(() => 0.5 - Math.random()).slice(0, 8);
 
     const finalBuy = specialBuyItem ? [specialBuyItem, ...randomBuy] : randomBuy;
     const finalSell = specialSellItem ? [specialSellItem, ...randomSell] : randomSell;
 
     setFinalBuyList(finalBuy);
     setFinalSellList(finalSell);
-  }, [isBlackMarket, placeName, placeType, specialBuy, specialSell, itemLimit]);
+  }, [isBlackMarket, placeName, currentCategory, specialBuy, specialSell]);
 
   useEffect(() => {
     localStorage.setItem('playerMoney', money);
-  }, [money]);
+    localStorage.setItem('enterCount', enterCount); // 更新
+  }, [money, enterCount]);
+
+  useEffect(() => {
+    // 5回入り直すたびに、カテゴリーをランダムで変更する
+    if (enterCount % 5 === 0 && enterCount > 0) {
+      const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+      setCurrentCategory(randomCategory);
+    }
+  }, [enterCount]);
 
   const handleBuy = (item, quantity) => {
     const totalCost = item.price * quantity;
@@ -123,7 +109,7 @@ function App() {
     <div className="App" style={{ fontFamily: 'sans-serif', padding: '20px' }}>
       <h1>行商ボードゲーム {isBlackMarket ? '闇市場' : '売買画面'}</h1>
       <h2>
-        現在地: {isBlackMarket ? '？？？（分類: 路地裏）' : `${placeName}（分類: ${placeType}）`}
+        現在地: {isBlackMarket ? '？？？（分類: 路地裏）' : `${placeName}（分類: ${currentCategory}）`}
       </h2>
 
       {specialBuy && !isBlackMarket && <p style={{ color: 'green' }}>🌟 特産品: {specialBuy}</p>}
