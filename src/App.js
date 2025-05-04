@@ -19,23 +19,43 @@ function App() {
   const [sellQuantities, setSellQuantities] = useState({});
   const [finalBuyList, setFinalBuyList] = useState([]);
   const [finalSellList, setFinalSellList] = useState([]);
+  const [specialCategories, setSpecialCategories] = useState([]); // 特産品・希少品カテゴリー管理
+  const [categoryChangeCounter, setCategoryChangeCounter] = useState(0); // カテゴリー変更回数カウンタ
 
   const areaMultiplier = { '村': 1.0, '町': 1.3, '市': 1.6 };
   const itemLimit = { '村': 5, '町': 10, '市': 20 }[placeType] || 8;
 
+  const categoryPool = Object.keys(itemsData); // items.jsonのカテゴリーキーを取得
+
+  // 入り直す回数をlocalStorageで管理
+  const getVisitCount = () => {
+    const count = localStorage.getItem('visitCount');
+    return count ? Number(count) : 0;
+  };
+
+  const incrementVisitCount = () => {
+    const newCount = getVisitCount() + 1;
+    localStorage.setItem('visitCount', newCount);
+    return newCount;
+  };
+
   useEffect(() => {
-    if (isBlackMarket) {
-      const allItems = Object.entries(itemsData).flatMap(([category, items]) =>
-        Object.entries(items).map(([itemName, basePrice]) => {
-          const price = Math.round(basePrice * (0.5 + Math.random() * 0.5));
-          return { itemName, price, category };
-        })
-      );
-      const shuffledBuy = allItems.sort(() => 0.5 - Math.random()).slice(0, 8);
-      const shuffledSell = allItems.sort(() => 0.5 - Math.random()).slice(0, 8);
-      setFinalBuyList(shuffledBuy);
-      setFinalSellList(shuffledSell);
-      return;
+    const visitCount = incrementVisitCount(); // 1回の訪問でカウントを増加
+
+    // 5回に1回カテゴリーをランダムに変更
+    if (visitCount % 5 === 0) {
+      const newCategories = [];
+      const availableCategories = [...categoryPool]; // 使用可能なカテゴリーを取得
+
+      // 地名に応じて選ばれるカテゴリー数を決定
+      const categoryCount = { '村': 1, '町': 2, '市': 3 }[placeType] || 1;
+
+      // ランダムでカテゴリーを選択
+      for (let i = 0; i < categoryCount; i++) {
+        const randomCategory = availableCategories[Math.floor(Math.random() * availableCategories.length)];
+        newCategories.push(randomCategory);
+      }
+      setSpecialCategories(newCategories); // 新しいカテゴリーを設定
     }
 
     const adjusted = {};
@@ -52,19 +72,16 @@ function App() {
       Object.entries(items).map(([itemName, price]) => ({ itemName, price, category }))
     );
 
-    const specialBuyItem = allItems.find(item => item.itemName === specialBuy);
-    const specialSellItem = allItems.find(item => item.itemName === specialSell);
+    // ランダムに選ばれたカテゴリーに対応するアイテムを表示
+    const filteredItems = allItems.filter(item => specialCategories.includes(item.category));
 
-    const randomBuy = allItems.filter(item => item.itemName !== specialBuy).sort(() => 0.5 - Math.random()).slice(0, Math.max(0, itemLimit - 1));
-    const randomSell = allItems.filter(item => item.itemName !== specialSell).sort(() => 0.5 - Math.random()).slice(0, Math.max(0, itemLimit - 1));
-
-    const finalBuy = specialBuyItem ? [specialBuyItem, ...randomBuy] : randomBuy;
-    const finalSell = specialSellItem ? [specialSellItem, ...randomSell] : randomSell;
+    const finalBuy = filteredItems.slice(0, Math.max(0, itemLimit - 1));
+    const finalSell = filteredItems.slice(0, Math.max(0, itemLimit - 1));
 
     setFinalBuyList(finalBuy);
     setFinalSellList(finalSell);
 
-  }, [isBlackMarket, placeName, placeType, specialBuy, specialSell, itemLimit]);
+  }, [isBlackMarket, placeName, placeType, specialBuy, specialSell, itemLimit, specialCategories, categoryChangeCounter]);
 
   useEffect(() => {
     localStorage.setItem('playerMoney', money);
@@ -151,4 +168,3 @@ function App() {
 }
 
 export default App;
-
