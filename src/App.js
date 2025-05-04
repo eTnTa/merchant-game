@@ -36,10 +36,15 @@ function App() {
 
     // カテゴリー変更カウント
     let newCategoryChangeCount = categoryChangeCount + 1;
+
+    // 5回ごとにカテゴリー変更
     if (newCategoryChangeCount >= 5) {
       newCategoryChangeCount = 0; // 5回目でカテゴリーをリセット
       setCategoryChanged(true);  // カテゴリー変更フラグを立てる
+    } else {
+      setCategoryChanged(false);  // それ以外はカテゴリー変更しない
     }
+
     setCategoryChangeCount(newCategoryChangeCount);
     localStorage.setItem('categoryChangeCount', newCategoryChangeCount);
 
@@ -59,7 +64,6 @@ function App() {
     }
 
     setSelectedCategories(selected); // 選ばれたカテゴリーを保存
-    setCategoryChanged(false);  // カテゴリー変更フラグをリセット
   }, [categoryChangeCount, placeType, categoryChanged]);
 
   useEffect(() => {
