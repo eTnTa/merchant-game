@@ -63,6 +63,7 @@ function App() {
 
     setFinalBuyList(finalBuy);
     setFinalSellList(finalSell);
+
   }, [isBlackMarket, placeName, placeType, specialBuy, specialSell, itemLimit]);
 
   useEffect(() => {
@@ -104,9 +105,7 @@ function App() {
 
       {specialBuy && !isBlackMarket && <p style={{ color: 'green' }}>🌟 特産品: {specialBuy}</p>}
       {specialSell && !isBlackMarket && <p style={{ color: 'red' }}>💎 希少品: {specialSell}</p>}
-      <p style={{ fontSize: '24px', border: '2px solid gold', padding: '10px', borderRadius: '8px', display: 'inline-block', background: '#fffbe6' }}>
-        💴 所持金：{money} G
-      </p>
+      <p style={{fontSize: '24px', border: '2px solid gold', padding: '10px', borderRadius: '8px', display: 'inline-block', background: '#fffbe6'}}>💴 所持金：{money} G</p>
 
       <div style={{ marginTop: '8px' }}>
         <input
@@ -119,29 +118,17 @@ function App() {
       </div>
 
       <div style={{ marginTop: '10px' }}>
-        <button onClick={handleResetMoney} style={{ background: '#444', color: '#fff', padding: '8px 16px', borderRadius: '5px' }}>
-          所持金リセット（3000Gに戻す）
-        </button>
+        <button onClick={handleResetMoney} style={{background: '#444', color: '#fff', padding: '8px 16px', borderRadius: '5px'}}>所持金リセット（3000Gに戻す）</button>
       </div>
 
       <h2>購入できるアイテム</h2>
       <div style={{ display: 'grid', gap: '10px' }}>
         {finalBuyList.map((item, index) => (
-          <div key={index} style={{ border: '2px solid #ccc', padding: '10px', borderRadius: '8px', background: '#f9f9f9' }}>
+          <div key={index} style={{border: '2px solid #ccc', padding: '10px', borderRadius: '8px', background: '#f9f9f9'}}>
             <strong>{item.itemName}</strong> ({item.category}) - {item.price}G /個
             <div>
-              <input
-                type="number"
-                min="1"
-                value={buyQuantities[item.itemName] || ''}
-                onChange={e => setBuyQuantities({ ...buyQuantities, [item.itemName]: e.target.value })}
-                style={{ width: '50px', margin: '5px' }}
-              /> 個
-              <button
-                onClick={() => handleBuy(item, Number(buyQuantities[item.itemName]))}
-                style={{ background: '#4caf50', color: '#fff', padding: '5px 10px', borderRadius: '5px' }}>
-                購入
-              </button>
+              <input type="number" min="1" value={buyQuantities[item.itemName] || ''} onChange={e => setBuyQuantities({...buyQuantities, [item.itemName]: e.target.value})} style={{ width: '50px', margin: '5px' }} /> 個
+              <button onClick={() => handleBuy(item, Number(buyQuantities[item.itemName]))} style={{ background: '#4caf50', color: '#fff', padding: '5px 10px', borderRadius: '5px' }}>購入</button>
             </div>
           </div>
         ))}
@@ -150,21 +137,11 @@ function App() {
       <h2 style={{ marginTop: '20px' }}>売却できるアイテム</h2>
       <div style={{ display: 'grid', gap: '10px' }}>
         {finalSellList.map((item, index) => (
-          <div key={index} style={{ border: '2px solid #ccc', padding: '10px', borderRadius: '8px', background: '#f9f9f9' }}>
+          <div key={index} style={{border: '2px solid #ccc', padding: '10px', borderRadius: '8px', background: '#f9f9f9'}}>
             <strong>{item.itemName}</strong> ({item.category}) - {item.price}G /個
             <div>
-              <input
-                type="number"
-                min="1"
-                value={sellQuantities[item.itemName] || ''}
-                onChange={e => setSellQuantities({ ...sellQuantities, [item.itemName]: e.target.value })}
-                style={{ width: '50px', margin: '5px' }}
-              /> 個
-              <button
-                onClick={() => handleSell(item, Number(sellQuantities[item.itemName]))}
-                style={{ background: '#e53935', color: '#fff', padding: '5px 10px', borderRadius: '5px' }}>
-                売却
-              </button>
+              <input type="number" min="1" value={sellQuantities[item.itemName] || ''} onChange={e => setSellQuantities({...sellQuantities, [item.itemName]: e.target.value})} style={{ width: '50px', margin: '5px' }} /> 個
+              <button onClick={() => handleSell(item, Number(sellQuantities[item.itemName]))} style={{ background: '#e53935', color: '#fff', padding: '5px 10px', borderRadius: '5px' }}>売却</button>
             </div>
           </div>
         ))}
@@ -174,3 +151,4 @@ function App() {
 }
 
 export default App;
+
