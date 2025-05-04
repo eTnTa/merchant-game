@@ -21,7 +21,7 @@ function App() {
   const [finalSellList, setFinalSellList] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [categoryChangeCount, setCategoryChangeCount] = useState(Number(localStorage.getItem('categoryChangeCount')) || 0);
-  const [categoryChanged, setCategoryChanged] = useState(false);  // カテゴリーが変更されたかを記録するステート
+  const [categoryChanged, setCategoryChanged] = useState(false);  // カテゴリー変更フラグを管理
 
   const areaMultiplier = { '村': 1.0, '町': 1.3, '市': 1.6 };
   const itemLimit = { '村': 5, '町': 10, '市': 20 }[placeType] || 8;
@@ -142,8 +142,10 @@ function App() {
         現在地: {isBlackMarket ? '？？？（分類: 路地裏）' : `${placeName}（分類: ${placeType}）`}
       </h2>
 
+      {/* 特産品と希少品が表示される部分 */}
       {specialBuy && !isBlackMarket && <p style={{ color: 'green' }}>🌟 特産品: {specialBuy}</p>}
       {specialSell && !isBlackMarket && <p style={{ color: 'red' }}>💎 希少品: {specialSell}</p>}
+      
       <p style={{fontSize: '24px', border: '2px solid gold', padding: '10px', borderRadius: '8px', display: 'inline-block', background: '#fffbe6'}}>💴 所持金：{money} G</p>
 
       <div style={{ marginTop: '8px' }}>
