@@ -21,50 +21,39 @@ function App() {
   const [finalSellList, setFinalSellList] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [categoryChangeCount, setCategoryChangeCount] = useState(Number(localStorage.getItem('categoryChangeCount')) || 0);
-  const [categoryChanged, setCategoryChanged] = useState(false);  // カテゴリー変更フラグを管理
 
   const areaMultiplier = { '村': 1.0, '町': 1.3, '市': 1.6 };
   const itemLimit = { '村': 5, '町': 10, '市': 20 }[placeType] || 8;
 
   useEffect(() => {
-    // カテゴリー変更処理
-    const categoriesAvailable = {
-      '村': 1,
-      '町': 2,
-      '市': 3
-    };
-
-    // カテゴリー変更カウント
-    let newCategoryChangeCount = categoryChangeCount + 1;
-
     // 5回ごとにカテゴリー変更
+    let newCategoryChangeCount = categoryChangeCount + 1;
     if (newCategoryChangeCount >= 5) {
-      newCategoryChangeCount = 0; // 5回目でカテゴリーをリセット
-      setCategoryChanged(true);  // カテゴリー変更フラグを立てる
+      newCategoryChangeCount = 0;
+      setCategoryChangeCount(newCategoryChangeCount);
+      localStorage.setItem('categoryChangeCount', newCategoryChangeCount);
+      // カテゴリー変更
+      changeCategories();
     } else {
-      setCategoryChanged(false);  // それ以外はカテゴリー変更しない
+      setCategoryChangeCount(newCategoryChangeCount);
+      localStorage.setItem('categoryChangeCount', newCategoryChangeCount);
     }
+  }, [categoryChangeCount]);
 
-    setCategoryChangeCount(newCategoryChangeCount);
-    localStorage.setItem('categoryChangeCount', newCategoryChangeCount);
-
-    // カテゴリーが変更されていない場合、既存のカテゴリーを再使用
-    if (!categoryChanged) return;
-
-    // ランダムなカテゴリーを選択
-    const categoryPool = Object.keys(itemsData); // items.jsonに基づくカテゴリー
-    const selected = [];
+  const changeCategories = () => {
+    const categoriesAvailable = { '村': 1, '町': 2, '市': 3 };
+    const categoryPool = Object.keys(itemsData);  // items.jsonのカテゴリーキー
     const numCategoriesToSelect = categoriesAvailable[placeType];
-    
+
+    const selected = [];
     for (let i = 0; i < numCategoriesToSelect; i++) {
       const randomCategory = categoryPool[Math.floor(Math.random() * categoryPool.length)];
       if (!selected.includes(randomCategory)) {
         selected.push(randomCategory);
       }
     }
-
-    setSelectedCategories(selected); // 選ばれたカテゴリーを保存
-  }, [categoryChangeCount, placeType, categoryChanged]);
+    setSelectedCategories(selected);
+  };
 
   useEffect(() => {
     if (isBlackMarket) {
@@ -103,7 +92,7 @@ function App() {
     setFinalBuyList(randomBuy);
     setFinalSellList(randomSell);
 
-  }, [selectedCategories, isBlackMarket, placeName, placeType, itemLimit, categoryChanged]);
+  }, [selectedCategories, isBlackMarket, placeName, placeType, itemLimit]);
 
   useEffect(() => {
     localStorage.setItem('playerMoney', money);
