@@ -19,43 +19,15 @@ function App() {
   const [sellQuantities, setSellQuantities] = useState({});
   const [finalBuyList, setFinalBuyList] = useState([]);
   const [finalSellList, setFinalSellList] = useState([]);
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [categoryChangeCount, setCategoryChangeCount] = useState(Number(localStorage.getItem('categoryChangeCount')) || 0);
 
   const areaMultiplier = { '村': 1.0, '町': 1.3, '市': 1.6 };
   const itemLimit = { '村': 5, '町': 10, '市': 20 }[placeType] || 8;
 
-  useEffect(() => {
-    // 5回ごとにカテゴリー変更
-    let newCategoryChangeCount = categoryChangeCount + 1;
-    if (newCategoryChangeCount >= 5) {
-      newCategoryChangeCount = 0;
-      setCategoryChangeCount(newCategoryChangeCount);
-      localStorage.setItem('categoryChangeCount', newCategoryChangeCount);
-      // カテゴリー変更
-      changeCategories();
-    } else {
-      setCategoryChangeCount(newCategoryChangeCount);
-      localStorage.setItem('categoryChangeCount', newCategoryChangeCount);
-    }
-  }, [categoryChangeCount]);
-
-  const changeCategories = () => {
-    const categoriesAvailable = { '村': 1, '町': 2, '市': 3 };
-    const categoryPool = Object.keys(itemsData);  // items.jsonのカテゴリーキー
-    const numCategoriesToSelect = categoriesAvailable[placeType];
-
-    const selected = [];
-    for (let i = 0; i < numCategoriesToSelect; i++) {
-      const randomCategory = categoryPool[Math.floor(Math.random() * categoryPool.length)];
-      if (!selected.includes(randomCategory)) {
-        selected.push(randomCategory);
-      }
-    }
-    setSelectedCategories(selected);
-  };
+  const STORAGE_KEY_COUNT = `entryCount_${placeName}`;
+  const STORAGE_KEY_CATEGORY = `fixedCategories_${placeName}`;
 
   useEffect(() => {
+    // 闇市場の処理
     if (isBlackMarket) {
       const allItems = Object.entries(itemsData).flatMap(([category, items]) =>
         Object.entries(items).map(([itemName, basePrice]) => {
@@ -70,29 +42,63 @@ function App() {
       return;
     }
 
+    const categoryList = Object.keys(itemsData);
+
+    // カウント管理と5回に1回カテゴリ更新
+    let count = Number(localStorage.getItem(STORAGE_KEY_COUNT) || '0');
+    let selectedCategories = JSON.parse(localStorage.getItem(STORAGE_KEY_CATEGORY) || '[]');
+
+    count++;
+    const shouldUpdateCategory = selectedCategories.length === 0 || count % 5 === 1;
+    const numCategories = { '村': 1, '町': 2, '市': 3 }[placeType] || 1;
+
+    if (shouldUpdateCategory) {
+      const shuffled = [...categoryList].sort(() => 0.5 - Math.random());
+      selectedCategories = shuffled.slice(0, numCategories);
+      localStorage.setItem(STORAGE_KEY_CATEGORY, JSON.stringify(selectedCategories));
+    }
+
+    localStorage.setItem(STORAGE_KEY_COUNT, count.toString());
+
+    // アイテム価格の調整
     const adjusted = {};
-    Object.entries(itemsData).forEach(([category, items]) => {
+    selectedCategories.forEach(category => {
       adjusted[category] = {};
-      Object.entries(items).forEach(([itemName, basePrice]) => {
-        let price = basePrice * areaMultiplier[placeType];
-        const randomRate = 0.9 + Math.random() * 0.2;
-        adjusted[category][itemName] = Math.round(price * randomRate);
+      Object.entries(itemsData[category] || {}).forEach(([itemName, basePrice]) => {
+        const price = Math.round(basePrice * areaMultiplier[placeType] * (0.9 + Math.random() * 0.2));
+        adjusted[category][itemName] = price;
       });
     });
 
-    const allItems = Object.entries(adjusted).flatMap(([category, items]) =>
+    // 全候補のアイテムリスト生成
+    let allItems = Object.entries(adjusted).flatMap(([category, items]) =>
       Object.entries(items).map(([itemName, price]) => ({ itemName, price, category }))
     );
 
-    const filteredItems = allItems.filter(item => selectedCategories.includes(item.category)); // 選ばれたカテゴリーに基づいてフィルタリング
+    // 特産品・希少品の追加（カテゴリに関係なく出す）
+    const specialItems = Object.entries(itemsData).flatMap(([category, items]) =>
+      Object.entries(items).map(([itemName, basePrice]) => {
+        const price = Math.round(basePrice * areaMultiplier[placeType] * (0.9 + Math.random() * 0.2));
+        return { itemName, price, category };
+      })
+    );
 
-    const randomBuy = filteredItems.sort(() => 0.5 - Math.random()).slice(0, Math.max(0, itemLimit - 1));
-    const randomSell = filteredItems.sort(() => 0.5 - Math.random()).slice(0, Math.max(0, itemLimit - 1));
+    const specialBuyItem = specialItems.find(item => item.itemName === specialBuy);
+    const specialSellItem = specialItems.find(item => item.itemName === specialSell);
 
-    setFinalBuyList(randomBuy);
-    setFinalSellList(randomSell);
+    const filteredBuy = allItems.filter(item => item.itemName !== specialBuy);
+    const filteredSell = allItems.filter(item => item.itemName !== specialSell);
 
-  }, [selectedCategories, isBlackMarket, placeName, placeType, itemLimit]);
+    const randomBuy = filteredBuy.sort(() => 0.5 - Math.random()).slice(0, Math.max(0, itemLimit - (specialBuyItem ? 1 : 0)));
+    const randomSell = filteredSell.sort(() => 0.5 - Math.random()).slice(0, Math.max(0, itemLimit - (specialSellItem ? 1 : 0)));
+
+    const finalBuy = specialBuyItem ? [specialBuyItem, ...randomBuy] : randomBuy;
+    const finalSell = specialSellItem ? [specialSellItem, ...randomSell] : randomSell;
+
+    setFinalBuyList(finalBuy);
+    setFinalSellList(finalSell);
+
+  }, [isBlackMarket, placeName, placeType, specialBuy, specialSell, itemLimit]);
 
   useEffect(() => {
     localStorage.setItem('playerMoney', money);
@@ -112,9 +118,7 @@ function App() {
   const handleSell = (item, quantity) => {
     if (quantity <= 0) return alert("数量を正しく入力してください。");
     let totalGain = item.price * quantity;
-    if (isBlackMarket) {
-      totalGain = Math.round(totalGain * 1.5);
-    }
+    if (isBlackMarket) totalGain = Math.round(totalGain * 1.5);
     setMoney(money + totalGain);
     alert(`${item.itemName} を ${quantity}個 売却！（+${totalGain}G）`);
   };
@@ -131,11 +135,14 @@ function App() {
         現在地: {isBlackMarket ? '？？？（分類: 路地裏）' : `${placeName}（分類: ${placeType}）`}
       </h2>
 
-      {/* 特産品と希少品が表示される部分 */}
       {specialBuy && !isBlackMarket && <p style={{ color: 'green' }}>🌟 特産品: {specialBuy}</p>}
       {specialSell && !isBlackMarket && <p style={{ color: 'red' }}>💎 希少品: {specialSell}</p>}
-      
-      <p style={{fontSize: '24px', border: '2px solid gold', padding: '10px', borderRadius: '8px', display: 'inline-block', background: '#fffbe6'}}>💴 所持金：{money} G</p>
+      <p style={{
+        fontSize: '24px', border: '2px solid gold', padding: '10px',
+        borderRadius: '8px', display: 'inline-block', background: '#fffbe6'
+      }}>
+        💴 所持金：{money} G
+      </p>
 
       <div style={{ marginTop: '8px' }}>
         <input
@@ -148,17 +155,28 @@ function App() {
       </div>
 
       <div style={{ marginTop: '10px' }}>
-        <button onClick={handleResetMoney} style={{background: '#444', color: '#fff', padding: '8px 16px', borderRadius: '5px'}}>所持金リセット（3000Gに戻す）</button>
+        <button onClick={handleResetMoney}
+          style={{ background: '#444', color: '#fff', padding: '8px 16px', borderRadius: '5px' }}>
+          所持金リセット（3000Gに戻す）
+        </button>
       </div>
 
       <h2>購入できるアイテム</h2>
       <div style={{ display: 'grid', gap: '10px' }}>
         {finalBuyList.map((item, index) => (
-          <div key={index} style={{border: '2px solid #ccc', padding: '10px', borderRadius: '8px', background: '#f9f9f9'}}>
+          <div key={index} style={{
+            border: '2px solid #ccc', padding: '10px',
+            borderRadius: '8px', background: '#f9f9f9'
+          }}>
             <strong>{item.itemName}</strong> ({item.category}) - {item.price}G /個
             <div>
-              <input type="number" min="1" value={buyQuantities[item.itemName] || ''} onChange={e => setBuyQuantities({...buyQuantities, [item.itemName]: e.target.value})} style={{ width: '50px', margin: '5px' }} /> 個
-              <button onClick={() => handleBuy(item, Number(buyQuantities[item.itemName]))} style={{ background: '#4caf50', color: '#fff', padding: '5px 10px', borderRadius: '5px' }}>購入</button>
+              <input type="number" min="1" value={buyQuantities[item.itemName] || ''}
+                onChange={e => setBuyQuantities({ ...buyQuantities, [item.itemName]: e.target.value })}
+                style={{ width: '50px', margin: '5px' }} /> 個
+              <button onClick={() => handleBuy(item, Number(buyQuantities[item.itemName]))}
+                style={{ background: '#4caf50', color: '#fff', padding: '5px 10px', borderRadius: '5px' }}>
+                購入
+              </button>
             </div>
           </div>
         ))}
@@ -167,11 +185,19 @@ function App() {
       <h2 style={{ marginTop: '20px' }}>売却できるアイテム</h2>
       <div style={{ display: 'grid', gap: '10px' }}>
         {finalSellList.map((item, index) => (
-          <div key={index} style={{border: '2px solid #ccc', padding: '10px', borderRadius: '8px', background: '#f9f9f9'}}>
+          <div key={index} style={{
+            border: '2px solid #ccc', padding: '10px',
+            borderRadius: '8px', background: '#f9f9f9'
+          }}>
             <strong>{item.itemName}</strong> ({item.category}) - {item.price}G /個
             <div>
-              <input type="number" min="1" value={sellQuantities[item.itemName] || ''} onChange={e => setSellQuantities({...sellQuantities, [item.itemName]: e.target.value})} style={{ width: '50px', margin: '5px' }} /> 個
-              <button onClick={() => handleSell(item, Number(sellQuantities[item.itemName]))} style={{ background: '#e53935', color: '#fff', padding: '5px 10px', borderRadius: '5px' }}>売却</button>
+              <input type="number" min="1" value={sellQuantities[item.itemName] || ''}
+                onChange={e => setSellQuantities({ ...sellQuantities, [item.itemName]: e.target.value })}
+                style={{ width: '50px', margin: '5px' }} /> 個
+              <button onClick={() => handleSell(item, Number(sellQuantities[item.itemName]))}
+                style={{ background: '#e53935', color: '#fff', padding: '5px 10px', borderRadius: '5px' }}>
+                売却
+              </button>
             </div>
           </div>
         ))}
@@ -181,3 +207,4 @@ function App() {
 }
 
 export default App;
+
