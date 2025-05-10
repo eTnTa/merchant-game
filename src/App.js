@@ -27,6 +27,9 @@ function App() {
   const STORAGE_KEY_CATEGORY = `fixedCategories_${placeName}`;
 
   useEffect(() => {
+    const SPECIAL_BUY_MULTIPLIER = 0.8;
+    const SPECIAL_SELL_MULTIPLIER = 1.2;
+
     // 闇市場の処理
     if (isBlackMarket) {
       const allItems = Object.entries(itemsData).flatMap(([category, items]) =>
@@ -85,6 +88,9 @@ function App() {
 
     const specialBuyItem = specialItems.find(item => item.itemName === specialBuy);
     const specialSellItem = specialItems.find(item => item.itemName === specialSell);
+
+    if (specialBuyItem) specialBuyItem.price = Math.round(specialBuyItem.price * SPECIAL_BUY_MULTIPLIER);
+    if (specialSellItem) specialSellItem.price = Math.round(specialSellItem.price * SPECIAL_SELL_MULTIPLIER);
 
     const filteredBuy = allItems.filter(item => item.itemName !== specialBuy);
     const filteredSell = allItems.filter(item => item.itemName !== specialSell);
@@ -207,4 +213,5 @@ function App() {
 }
 
 export default App;
+
 
